@@ -1,0 +1,7 @@
+{
+  "name": "SeteCordas Pro",
+  "description": "Um assistente avançado para violonistas de 7 cordas, com afinador preciso, afinações alternativas e metrônomo rítmico com treinador IA.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
