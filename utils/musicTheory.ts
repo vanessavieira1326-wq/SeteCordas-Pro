@@ -50,6 +50,30 @@ export const getScaleNotes = (root: NoteName, scaleType: ScaleType): NoteName[] 
     return SCALES[scaleType].map(interval => getNoteFromInterval(root, interval));
 };
 
+export const getCycleOfFifths = (startNote: NoteName = 'C'): NoteName[] => {
+  const cycle: NoteName[] = [];
+  let currentNote = startNote;
+  
+  for (let i = 0; i < 12; i++) {
+    cycle.push(currentNote);
+    currentNote = getNoteFromInterval(currentNote, 7); // 7 semitones = Perfect 5th
+  }
+  
+  return cycle;
+};
+
+export const getCycleOfFourths = (startNote: NoteName = 'C'): NoteName[] => {
+    const cycle: NoteName[] = [];
+    let currentNote = startNote;
+
+    for (let i = 0; i < 12; i++) {
+        cycle.push(currentNote);
+        currentNote = getNoteFromInterval(currentNote, 5); // 5 semitones = Perfect 4th
+    }
+
+    return cycle;
+};
+
 // --- Fretboard Mapping for 7-String ---
 
 interface FretPosition {

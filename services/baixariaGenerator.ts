@@ -121,7 +121,17 @@ export const generateProgression = (key: NoteName, tonality: Tonality, level: st
 
 // --- BASS LINE STRATEGIES ---
 
-type Strategy = 'ROOT_FIFTH' | 'ALTERNATING_RANGE' | 'ASCENDING_RUN' | 'DESCENDING_RESOLUTION' | 'ARPEGGIO_COUNT' | 'CHROMATIC_ENCLOSURE' | 'OCTAVE_JUMP' | 'MELODIC_MINOR_SCALE';
+type Strategy = 
+  | 'ROOT_FIFTH' 
+  | 'ALTERNATING_RANGE' 
+  | 'ASCENDING_RUN' 
+  | 'DESCENDING_RESOLUTION' 
+  | 'ARPEGGIO_COUNT' 
+  | 'CHROMATIC_ENCLOSURE' 
+  | 'OCTAVE_JUMP' 
+  | 'MELODIC_MINOR_SCALE'
+  | 'MAJOR_SCALE_PATTERN'
+  | 'MIXOLYDIAN_SCALE_PATTERN';
 
 export const generateBassLine = (
   progression: Chord[],
@@ -145,25 +155,27 @@ export const generateBassLine = (
     const nextChord = progression[(index + 1) % progression.length];
     const beatsInChord = chord.duration;
     
-    // Scale Logic
-    let scaleType: ScaleType = 'Major';
     const q = chord.quality;
+    const chordTones = getChordTones(chord);
+    
+    // Scale Logic for Strategy Selection
+    let scaleType: ScaleType = 'Major';
     if (q.includes('m7b5')) scaleType = 'Locrian';
     else if (q.includes('dim')) scaleType = 'Harmonic Minor';
-    else if (q === 'm7' || q === 'm6' || q === 'm') scaleType = 'Minor'; // We will override this for the specialized strategy
+    else if (q.includes('m')) scaleType = 'Minor';
     else if (q === '7') scaleType = 'Mixolydian';
 
     const scaleNotes = getScaleNotes(chord.root, scaleType);
-    const chordTones = getChordTones(chord);
 
     // --- STRATEGY SELECTION ---
     let strategy: Strategy = 'ROOT_FIFTH';
     
     if (density === 'scale') {
          // User explicitly requested "Escala (Modelo Partitura)"
-         // Only apply to Minor chords for the full Melodic/Natural effect, otherwise standard scale run
+         // Apply appropriate scale pattern based on chord quality
          if (q.includes('m')) strategy = 'MELODIC_MINOR_SCALE';
-         else strategy = 'ASCENDING_RUN';
+         else if (q === '7') strategy = 'MIXOLYDIAN_SCALE_PATTERN';
+         else strategy = 'MAJOR_SCALE_PATTERN';
     } else if (density !== 'auto') {
         strategy = 'ARPEGGIO_COUNT';
     } else {
@@ -198,41 +210,49 @@ export const generateBassLine = (
 
     // --- EXECUTE STRATEGY ---
 
-    if (strategy === 'MELODIC_MINOR_SCALE') {
-        // MODEL: Ascending Melodic Minor (1, 2, b3, 4, 5, 6, 7) -> Descending Natural Minor (b7, b6, 5, 4, b3, 2, 1)
-        // This mimics the "Escala de Cm6" and "Escala de Dm6" score pattern.
+    if (strategy === 'MELODIC_MINOR_SCALE' || strategy === 'MAJOR_SCALE_PATTERN' || strategy === 'MIXOLYDIAN_SCALE_PATTERN') {
+        // SCALES PATTERNS (Ascending / Descending)
         
-        // 1. Calculate the full scale sequence based on Root
-        // Melodic Minor Up: 0, 2, 3, 5, 7, 9, 11, 12
-        // Natural Minor Down: 10, 8, 7, 5, 3, 2, 0
-        const melodicAsc = [0, 2, 3, 5, 7, 9, 11, 12];
-        const naturalDesc = [10, 8, 7, 5, 3, 2, 0];
+        let asc: number[] = [];
+        let desc: number[] = [];
+        let triadIntervals: number[] = [0, 4, 7, 12];
+
+        if (strategy === 'MELODIC_MINOR_SCALE') {
+            // Melodic Minor Up: 1 2 b3 4 5 6 7 8
+            asc = [0, 2, 3, 5, 7, 9, 11, 12];
+            // Natural Minor Down: b7 b6 5 4 b3 2 1
+            desc = [10, 8, 7, 5, 3, 2, 0];
+            triadIntervals = [0, 3, 7, 12];
+        } else if (strategy === 'MIXOLYDIAN_SCALE_PATTERN') {
+            // Mixolydian Up: 1 2 3 4 5 6 b7 8
+            asc = [0, 2, 4, 5, 7, 9, 10, 12];
+            // Mixolydian Down: b7 6 5 4 3 2 1
+            desc = [10, 9, 7, 5, 4, 2, 0];
+            triadIntervals = [0, 4, 7, 10, 12];
+        } else {
+            // Major Up: 1 2 3 4 5 6 7 8
+            asc = [0, 2, 4, 5, 7, 9, 11, 12];
+            // Major Down: 7 6 5 4 3 2 1
+            desc = [11, 9, 7, 5, 4, 2, 0];
+        }
         
-        // Determine rhythm density
-        // If 2 beats (Samba/Choro standard bar), we have room for 8 16th notes (up only) or fast run
-        // If 4 beats, we can do up and down.
-        
-        const noteDuration = 0.25; // 16th notes (Semicolcheias)
+        const noteDuration = 0.25; // 16th notes
         const totalNotes = Math.floor(beatsInChord / noteDuration);
         
         let sequence: number[] = [];
         
+        // Logic: if bar is long enough, go up and down. If short, just up or adapt.
         if (totalNotes >= 15) {
-             // Full Up and Down
-             sequence = [...melodicAsc, ...naturalDesc];
-             // Trim or fill
+             sequence = [...asc, ...desc];
              if (sequence.length > totalNotes) sequence = sequence.slice(0, totalNotes);
         } else {
-             // Just Up or Just Down based on context?
-             // Usually Up is more identifying for Melodic Minor
-             sequence = melodicAsc;
+             sequence = asc;
              if (sequence.length > totalNotes) sequence = sequence.slice(0, totalNotes);
         }
 
         sequence.forEach((interval, i) => {
             const noteMidi = rootMidi + interval;
-            // Range check
-            if (noteMidi <= TREBLE_CEILING + 5) { // Allow slight over for scale
+            if (noteMidi <= TREBLE_CEILING + 5) {
                  const n = midiToNote(noteMidi);
                  const p = findFretPosition(n.note, n.octave, tuning);
                  if (p) {
@@ -240,7 +260,7 @@ export const generateBassLine = (
                          ...p,
                          duration: noteDuration,
                          startTime: currentBeatOffset + (i * noteDuration),
-                         isChordTone: [0, 3, 7, 12].includes(interval % 12), // Highlight Triad tones
+                         isChordTone: triadIntervals.includes(interval % 12),
                          isChromatic: false
                      });
                  }
@@ -315,8 +335,6 @@ export const generateBassLine = (
              if(p) notes.push({...p, duration: 0.5, startTime: currentBeatOffset + startRun + 0.5, isChordTone: true});
         }
         else if (strategy === 'CHROMATIC_ENCLOSURE') {
-             // Target: Next Chord Root
-             // Approach: Above -> Below -> Target
              const nextRootIdx = getNoteIndex(nextChord.root);
              let targetMidi = nextRootIdx + 36;
              if (targetMidi < LOW_LIMIT) targetMidi += 12;
@@ -324,15 +342,12 @@ export const generateBassLine = (
              const above = targetMidi + 1;
              const below = targetMidi - 1;
              
-             // Time: last beat of bar
              const startTime = currentBeatOffset + beatsInChord - 1.0;
              
-             // Play Above
              let n = midiToNote(above);
              let p = findFretPosition(n.note, n.octave, tuning);
              if(p) notes.push({...p, duration: 0.5, startTime: startTime, isChromatic: true});
 
-             // Play Below
              n = midiToNote(below);
              p = findFretPosition(n.note, n.octave, tuning);
              if(p) notes.push({...p, duration: 0.5, startTime: startTime + 0.5, isChromatic: true});
@@ -351,7 +366,6 @@ export const generateBassLine = (
                 if (p) notes.push({ ...p, duration: 0.5, startTime: currentBeatOffset + 1.5, isChordTone: true });
                 currentMidi = highTarget;
              }
-             // Simple descent
              const startRun = beatsInChord - 1.0;
              const n = midiToNote(rootMidi);
              const p = findFretPosition(n.note, n.octave, tuning);

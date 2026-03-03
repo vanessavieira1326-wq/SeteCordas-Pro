@@ -160,4 +160,4 @@ export interface UserProfile {
   streakDays: number;
 }
 
-export type AppTab = 'tuner' | 'metronome' | 'fretboard' | 'bass-trainer' | 'rhythms' | 'coach' | 'separator' | 'smart-trainer' | 'evolution';
+export type AppTab = 'tuner' | 'metronome' | 'fretboard' | 'bass-trainer' | 'rhythms' | 'coach' | 'separator' | 'smart-trainer' | 'evolution' | 'cycle';

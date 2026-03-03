@@ -9,9 +9,10 @@ import { RhythmLibrary } from './components/RhythmLibrary';
 import { AudioSeparator } from './components/AudioSeparator';
 import { SmartTrainer } from './components/SmartTrainer';
 import { EvolutionSystem } from './components/EvolutionSystem';
+import { CycleOfFifths } from './components/CycleOfFifths';
 import { SeventhStringTuning, RhythmStyle, AppTab } from './types';
 import { getAudioContext } from './utils/audio';
-import { Music, Mic2, Disc, Sparkles, Grid3x3, Activity, Wand2, SplitSquareHorizontal, Trophy, WifiOff } from 'lucide-react';
+import { Music, Mic2, Disc, Sparkles, Grid3x3, Activity, Wand2, SplitSquareHorizontal, Trophy, WifiOff, CircleDashed } from 'lucide-react';
 
 const App: React.FC = () => {
   const [tuning, setTuning] = useState<SeventhStringTuning>(SeventhStringTuning.C);
@@ -102,6 +103,12 @@ const App: React.FC = () => {
                 >
                     <Grid3x3 size={14} /> Mapa
                 </button>
+                <button 
+                    onClick={() => setActiveTab('cycle')}
+                    className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'cycle' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                >
+                    <CircleDashed size={14} /> Ciclo
+                </button>
                  <button 
                     onClick={() => setActiveTab('bass-trainer')}
                     className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'bass-trainer' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
@@ -151,6 +158,10 @@ const App: React.FC = () => {
                 <Fretboard tuning={tuning} />
             </div>
 
+            <div className={activeTab === 'cycle' ? 'block h-full' : 'hidden'}>
+                <CycleOfFifths />
+            </div>
+
             <div className={activeTab === 'bass-trainer' ? 'block h-full' : 'hidden'}>
                 <BassTrainer />
             </div>
@@ -188,6 +199,9 @@ const App: React.FC = () => {
             </button>
             <button onClick={() => setActiveTab('fretboard')} className={`flex-1 min-w-[64px] flex flex-col items-center justify-center gap-1.5 transition-colors ${activeTab === 'fretboard' ? 'text-indigo-400' : 'text-slate-500'}`}>
                 <Grid3x3 size={20} /><span className="text-[9px] font-bold uppercase tracking-wide">Mapa</span>
+            </button>
+            <button onClick={() => setActiveTab('cycle')} className={`flex-1 min-w-[64px] flex flex-col items-center justify-center gap-1.5 transition-colors ${activeTab === 'cycle' ? 'text-purple-400' : 'text-slate-500'}`}>
+                <CircleDashed size={20} /><span className="text-[9px] font-bold uppercase tracking-wide">Ciclo</span>
             </button>
              <button onClick={() => setActiveTab('bass-trainer')} className={`flex-1 min-w-[64px] flex flex-col items-center justify-center gap-1.5 transition-colors ${activeTab === 'bass-trainer' ? 'text-red-400' : 'text-slate-500'}`}>
                 <Wand2 size={20} /><span className="text-[9px] font-bold uppercase tracking-wide">Gerador</span>
